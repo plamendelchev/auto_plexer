@@ -2,7 +2,7 @@
 
 ## Plamen Delchev 28.02.2020
 
-set -o errexit
+#set -o errexit
 set -o pipefail
 set -o nounset
 
