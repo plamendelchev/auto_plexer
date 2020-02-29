@@ -72,7 +72,7 @@ fi
 backup_ssh_config() {
 	echo -e "Backing up ${SSH_CONFIG} ... "
 	if ! cp -f "${SSH_CONFIG}" "${SSH_CONFIG}.bkp"; then
-		echo "Unable to backup ${SSH_CONFIG}"
+		echo "Unable to backup ${SSH_CONFIG}" 1>&2
 		exit 1
 	fi
 }
@@ -91,7 +91,7 @@ generate_multiplex_config() {
 append_multiplex_config() {
 	echo -e "Adding multiplex config into ${SSH_CONFIG} ... "
 	if ! echo "${MULTIPLEX_CONFIG}" >> "${SSH_CONFIG}"; then
-		echo 'Unable to add the configuration ¯\_(ツ)_/¯'
+		echo 'Unable to add the configuration ¯\_(ツ)_/¯' 1>&2
 		exit 1
 	fi
 }
