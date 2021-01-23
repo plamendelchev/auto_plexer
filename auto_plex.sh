@@ -6,7 +6,7 @@ set -o pipefail
 set -o nounset
 
 usage() {
-  cat << EOF
+  cat 1>&2 << EOF
 
 Auto Plexer
 
@@ -18,8 +18,8 @@ Usage:
 Options:
   -s Show SSH multiplex connection status
   -c Cancel SSH multiplex connection
-
 EOF
+  exit 1
 }
 
 # Source configuration file
@@ -39,23 +39,37 @@ msg_err() {
 while getopts ':s:c:' flag; do
   case "${flag}" in
     s)
-      if ! grep -q "${OPTARG}" "${SSH_CONFIG}"; then
+      # Check if 'Include ~/.ssh/hostname.com_config' is present in ssh config file
+      if ! grep -q "Include ${HOME}/.ssh/${OPTARG}_config" "${SSH_CONFIG}"; then
         msg_err "${OPTARG} is not present in ${SSH_CONFIG}"
       fi
 
-      ssh -O check "${OPTARG}"
+      status="$(ssh -O check "${OPTARG}" 2>&1)"
+      if (( "$?" != 0 )); then
+        msg "SSH Socket for ${OPTARG} is not active"
+      else
+        msg "${status}"
+      fi
+
       exit
       ;;
     c) 
-      if ! grep -q "${OPTARG}" "${SSH_CONFIG}"; then
+      # Check if 'Include ~/.ssh/hostname.com_config' is present in ssh config file
+      if ! grep -q "Include ${HOME}/.ssh/${OPTARG}_config" "${SSH_CONFIG}"; then
         msg_err "${OPTARG} is not present in ${SSH_CONFIG}"
       fi
 
-      ssh -O exit "${OPTARG}"
-      cat "${SSH_CONFIG}.bkp" > "${SSH_CONFIG}" && rm -f "${SSH_CONFIG}.bkp"
+      # Stop SSH session
+      ssh -O stop "${OPTARG}" 2> /dev/null
 
-      msg "${SSH_CONFIG} reverted from backup"
+      # Remove Include directive from main ssh config file
+      temp="$(grep -Ev "Include .*${OPTARG}_config" "${SSH_CONFIG}")"
+      printf '%s' "${temp}" > "${SSH_CONFIG}"
 
+      # Remove multiplex config file
+      rm -f "${HOME}/.ssh/${OPTARG}_config"
+
+      msg "SSH Socket for ${OPTARG} stopped!"
       exit
       ;;
     :)
@@ -68,40 +82,21 @@ while getopts ':s:c:' flag; do
   esac
 done
 
-(( $# == 0 )) && { usage 1>&2; exit 1; }
+# Exit program if no arguments are provided
+(( "$#" == 0 )) && usage
 
-# Functions
-backup_ssh_config() {
-  msg "Backing up ${SSH_CONFIG} ... "
-  if ! cp -f "${SSH_CONFIG}" "${SSH_CONFIG}.bkp"; then
-    msg_err "Unable to backup ${SSH_CONFIG}"
-  fi
-}
+# Main
+msg "Adding multiplex config into ${SSH_CONFIG} ..."
 
-generate_multiplex_config() {
-  declare -r HOSTNAME="$@"
+## Populate multiplex config file
+readonly HOSTNAME="$1"
+readonly MULTIPLEX_SETTINGS="Host ${HOSTNAME}\nControlPath ${SSH_CONTROL_PATH}\nControlMaster ${SSH_CONTROL_MASTER}\nControlPersist ${SSH_CONTROL_PERSIST}"
 
-  readonly MULTIPLEX_CONFIG="Host "${HOSTNAME}"
-  ControlPath ${SSH_CONTROL_PATH}
-  ControlMaster ${SSH_CONTROL_MASTER}
-  ControlPersist ${SSH_CONTROL_PERSIST}
-  "
-  echo "${MULTIPLEX_CONFIG}"
-}
+## Create multiplex config file
+readonly MULTIPLEX_FILE="${HOME}/.ssh/${HOSTNAME}_config"
+printf '%b\n' "${MULTIPLEX_SETTINGS}" > "${MULTIPLEX_FILE}"
 
-append_multiplex_config() {
-  msg "Adding multiplex config into ${SSH_CONFIG} ..."
-  if ! echo -e "\n${MULTIPLEX_CONFIG}" >> "${SSH_CONFIG}"; then
-    msg_err 'Unable to add the configuration ¯\_(ツ)_/¯'
-  fi
-}
+## Include multiplex config in main ssh config file
+printf '\nInclude %b\n' "${MULTIPLEX_FILE}" >> ${SSH_CONFIG} 
 
-main() {
-  backup_ssh_config
-  generate_multiplex_config "$@"
-  append_multiplex_config
-
-  msg 'Done!'
-}
-
-main "$@"
+msg 'Done!'
