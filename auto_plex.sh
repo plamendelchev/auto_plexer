@@ -22,11 +22,10 @@ EOF
   exit 1
 }
 
-# Source configuration file
-readonly LOCAL_CONFIG="${HOME}/.config/auto_plexer"
-[[ -e "${LOCAL_CONFIG}" ]] && source "${LOCAL_CONFIG}"
+## Exit program if no arguments are provided
+(( "$#" == 0 )) && usage
 
-# Helper functions
+## Helper functions
 msg() {
   printf '%s\n' "$@" 2>&1
 }
@@ -35,12 +34,20 @@ msg_err() {
   exit 1
 }
 
-# Main 
+exists() {
+  grep -q "Include ${HOME}/.ssh/$1_config/" "$2"
+}
+
+## Source configuration file
+readonly LOCAL_CONFIG="${HOME}/.config/auto_plexer"
+[[ -e "${LOCAL_CONFIG}" ]] && source "${LOCAL_CONFIG}"
+
+## Main 
 while getopts ':s:c:' flag; do
   case "${flag}" in
     s)
       # Check if 'Include ~/.ssh/hostname.com_config' is present in ssh config file
-      if ! grep -q "Include ${HOME}/.ssh/${OPTARG}_config" "${SSH_CONFIG}"; then
+      if ! exists "${OPTARG}" "${SSH_CONFIG}"; then
         msg_err "${OPTARG} is not present in ${SSH_CONFIG}"
       fi
 
@@ -55,7 +62,7 @@ while getopts ':s:c:' flag; do
       ;;
     c) 
       # Check if 'Include ~/.ssh/hostname.com_config' is present in ssh config file
-      if ! grep -q "Include ${HOME}/.ssh/${OPTARG}_config" "${SSH_CONFIG}"; then
+      if ! exists "${OPTARG}" "${SSH_CONFIG}"; then
         msg_err "${OPTARG} is not present in ${SSH_CONFIG}"
       fi
 
@@ -69,23 +76,19 @@ while getopts ':s:c:' flag; do
       # Remove multiplex config file
       rm -f "${HOME}/.ssh/${OPTARG}_config"
 
-      msg "SSH Socket for ${OPTARG} stopped!"
+      msg "SSH Socket for ${OPTARG} deleted!"
       exit
       ;;
     :)
       msg_err "-${OPTARG} must be followed by an argument we"
       ;;
     *)
-      usage 1>&2
-      exit 1
+      usage
       ;;
   esac
 done
 
-# Exit program if no arguments are provided
-(( "$#" == 0 )) && usage
-
-# Main
+## Main
 msg "Adding multiplex config into ${SSH_CONFIG} ..."
 
 ## Populate multiplex config file
