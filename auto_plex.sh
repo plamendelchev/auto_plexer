@@ -78,19 +78,19 @@ backup_ssh_config() {
 }
 
 generate_multiplex_config() {
-	declare -r HOSTNAME="$1"
+	declare -r HOSTNAME="$@"
 
-	readonly MULTIPLEX_CONFIG="Host ${HOSTNAME}
-			HostName ${HOSTNAME}
+	readonly MULTIPLEX_CONFIG="Host "${HOSTNAME}"
 			ControlPath ${SSH_CONTROL_PATH}
 			ControlMaster ${SSH_CONTROL_MASTER}
 			ControlPersist ${SSH_CONTROL_PERSIST}
 	"
+	echo "${MULTIPLEX_CONFIG}"
 }
 
 append_multiplex_config() {
 	echo -e "Adding multiplex config into ${SSH_CONFIG} ... "
-	if ! echo "${MULTIPLEX_CONFIG}" >> "${SSH_CONFIG}"; then
+	if ! echo -e "\n${MULTIPLEX_CONFIG}" >> "${SSH_CONFIG}"; then
 		echo 'Unable to add the configuration ¯\_(ツ)_/¯' 1>&2
 		exit 1
 	fi
@@ -98,7 +98,7 @@ append_multiplex_config() {
 
 main() {
 	backup_ssh_config
-	generate_multiplex_config "$1"
+	generate_multiplex_config "$@"
 	append_multiplex_config
 
 	echo 'Done!'
