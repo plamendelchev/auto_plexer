@@ -2,7 +2,6 @@
 
 ## Plamen Delchev 28.02.2020
 
-#set -o errexit
 set -o pipefail
 set -o nounset
 
@@ -23,12 +22,11 @@ Options:
 EOF
 }
 
-# Constants
-readonly SSH_CONFIG='/Users/plamen.delchev/.ssh/config'
-readonly SSH_CONTROL_PATH='/tmp/transfer-%h.local.sock'
-readonly SSH_CONTROL_MASTER='auto'
-readonly SSH_CONTROL_PERSIST='20m'
+# Source configuration file
+readonly LOCAL_CONFIG="${HOME}/.config/auto_plexer"
+[[ -e "${LOCAL_CONFIG}" ]] && source "${LOCAL_CONFIG}"
 
+# Main 
 while getopts ':s:c:' flag; do
 	case "${flag}" in
 		s)
