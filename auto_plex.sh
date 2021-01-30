@@ -33,9 +33,8 @@ msg_err() {
   printf '%s\n' "$@" 1>&2
   exit 1
 }
-
 exists() {
-  grep -q "Include ${HOME}/.ssh/$1_config/" "$2"
+  grep -q "Include ${HOME}/.ssh/$1_config" "$2"
 }
 
 ## Source configuration file
@@ -91,15 +90,14 @@ done
 ## Main
 msg "Adding multiplex config into ${SSH_CONFIG} ..."
 
-## Populate multiplex config file
-readonly HOSTNAME="$1"
-readonly MULTIPLEX_SETTINGS="Host ${HOSTNAME}\nControlPath ${SSH_CONTROL_PATH}\nControlMaster ${SSH_CONTROL_MASTER}\nControlPersist ${SSH_CONTROL_PERSIST}"
-
 ## Create multiplex config file
-readonly MULTIPLEX_FILE="${HOME}/.ssh/${HOSTNAME}_config"
-printf '%b\n' "${MULTIPLEX_SETTINGS}" > "${MULTIPLEX_FILE}"
+readonly HOSTNAME="$1"
+# We get these values from `source "${LOCAL_CONFIG}"`
+readonly MULTIPLEX_SETTINGS="Host ${HOSTNAME}\nControlPath ${SSH_CONTROL_PATH}\nControlMaster ${SSH_CONTROL_MASTER}\nControlPersist ${SSH_CONTROL_PERSIST}"
+readonly MULTIPLEX_FILENAME="${HOME}/.ssh/${HOSTNAME}_config"
+printf '%b\n' "${MULTIPLEX_SETTINGS}" > "${MULTIPLEX_FILENAME}"
 
 ## Include multiplex config in main ssh config file
-printf '\nInclude %b\n' "${MULTIPLEX_FILE}" >> ${SSH_CONFIG} 
+printf '\n\nInclude %b\n' "${MULTIPLEX_FILENAME}" >> ${SSH_CONFIG} 
 
 msg 'Done!'
